@@ -1,0 +1,24 @@
+{
+      "InsuranceDetail": {
+        "assignBenefits": "Y",
+        "coPay": 99,
+        "copayType": "$",
+        "encEligibilityStatus": "V",
+        "endDate": "02/28/2026",
+        "groupName": "Group Number",
+        "groupNo": 54321,
+        "guarantorId": 275734,
+        "guarantorRelation": 1,
+        "id": 327968,
+        "insType": "C1",
+        "insuranceClass": "MSUP",
+        "insuranceId": 894,
+        "isGuarantorPatient": 1,
+        "patientId": 275734,
+        "paymentSource": "CI",
+        "ptSigSource": "B",
+        "seqNo": 1,
+        "startDate": "02/01/2026",
+        "subscriberNo": 123456
+      }
+    }
