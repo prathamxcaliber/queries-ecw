@@ -166,5 +166,22 @@
       "mismatches": 0,
       "success_rate": "100%"
     }
+  },
+  "Slots": {
+    "pending_issues": 1,
+    "issues": {
+      "encType": {
+        "query_result": "1",
+        "expected": "\"OF\" (string code, e.g. Office)",
+        "issue": "enc.encType is stored as smallint in mobiledoc; ECW API returns a string code. No integer-to-code lookup table found in mobiledoc schema.",
+        "status": "Data quality issue - ECW API layer performs the int→code translation; mapping not available in DB"
+      }
+    },
+    "summary": {
+      "total_fields": 35,
+      "matching": 34,
+      "mismatches": 1,
+      "success_rate": "97.1%"
+    }
   }
 }
