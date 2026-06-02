@@ -1,0 +1,23 @@
+{
+  "Id": 2312,
+  "Name": "**UHS-Discharge Pharmacy",
+  "Addr1": "4502 Medical Dr.",
+  "Addr2": "",
+  "City": "San Antonio",
+  "State": "TX",
+  "Zip": 78229,
+  "Tel": "210-358-2904",
+  "Fax": "210-358-4747",
+  "faxDialingCountryId": "",
+  "EMail": "",
+  "FaxPrefix": "",
+  "NCPDPID": 4537796,
+  "MailOrderPharmacy": 0,
+  "pharmacyPhoneExt": "",
+  "ServiceLevel": "NewRx,RefillRx,CanRx,EPCS",
+  "EPrescribeEnabled": 1,
+  "EPCSEnabled": 1,
+  "EPrescribeEnabledBy": "Surescripts",
+  "PillPassLocation": 0,
+  "CrossStreet": ""
+}

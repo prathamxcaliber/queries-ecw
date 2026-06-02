@@ -163,7 +163,7 @@ SELECT
     CASE WHEN ISNULL(b.bookedCount, 0) = 0 THEN 1 ELSE 0 END  AS free,          -- 1=available, 0=booked
     DATEPART(WEEKDAY, s.SlotDate) % 7                          AS nWeekDay,      -- 0=Sun … 6=Sat
     DATEDIFF(MINUTE, s.SlotTime, s.EndTime)                    AS size,          -- slot duration in minutes
-    ''                                                         AS background,    -- no background column in mobiledoc schema
+    NULL                                                         AS background,    -- no background column in mobiledoc schema
 
     -- ── Internal diagnostic columns (not in API) ──────────────────────────────
     CASE

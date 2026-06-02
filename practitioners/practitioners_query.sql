@@ -19,7 +19,7 @@ SELECT
     -- Fixed: Changed from doctors.FacilityId to users.primaryservicelocation
     ISNULL(u.primaryservicelocation, 0) AS primarylocation,
     ISNULL(d.PrintName, '') AS dbprintname,
-    '' AS timezone,
+    NULL AS timezone,
     CAST(d.NPI AS BIGINT) AS NPI,
     ISNULL(d.regp2pnpi, 0) AS P2PNPI,
     -- Fixed: Try suffix field first, then degreeCredentials

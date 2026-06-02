@@ -1,0 +1,22 @@
+[
+  {
+    "patientId": "275734",
+    "obHistory": [
+      {
+        "date": "05/19/2026",
+        "symptom": "Total # Abortions",
+        "notes": "1"
+      },
+      {
+        "date": "05/19/2026",
+        "symptom": "Total # Miscarriages",
+        "notes": "2"
+      },
+      {
+        "date": "05/19/2026",
+        "symptom": "Total # Pregnancies",
+        "notes": "2"
+      }
+    ]
+  }
+]

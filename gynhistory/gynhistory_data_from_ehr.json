@@ -1,0 +1,28 @@
+[
+  {
+    "patientId": "275734",
+    "gynHistory": [
+      {
+        "date": "05/19/2026",
+        "symptom": "Total Cycle Length",
+        "notes": "1-7 Days",
+        "hxFlag": "0",
+        "denyFlag": "0"
+      },
+      {
+        "date": "05/19/2026",
+        "symptom": "Sexual Partners",
+        "notes": "Not applicable",
+        "hxFlag": "0",
+        "denyFlag": "0"
+      },
+      {
+        "date": "05/19/2026",
+        "symptom": "Pap Smear Result",
+        "notes": "CIS",
+        "hxFlag": "0",
+        "denyFlag": "0"
+      }
+    ]
+  }
+]

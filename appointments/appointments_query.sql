@@ -55,7 +55,7 @@ SELECT
     -- Facility and practice information
     e.facilityId,
     ISNULL(ef.Name, '') AS facilityName,
-    '' AS facilityCode,  -- Note: No facility code field found in edi_facilities
+    NULL AS facilityCode,  -- Note: No facility code field found in edi_facilities
     e.practiceId,
     
     -- Clinical information

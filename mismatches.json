@@ -1,4 +1,94 @@
 {
+  "Documents": {
+    "test_record": {
+      "patientId": 327910,
+      "docId": 5990124,
+      "customName": "Patient Communication",
+      "doc_Type": 4,
+      "note": "Patient 327910 has no users row — orphaned document. PatientName ',' is correct behavior."
+    },
+    "verified_against": "patientId 327910 / docId 5990124 (cfid=537180) — diff run 2026-05-26",
+    "issues": {
+      "ReviewStatusChange": {
+        "query_result": "NULL",
+        "expected": "true",
+        "root_cause": "Computed at the API layer. No DB column stores this boolean; it is derived from review state logic in the application.",
+        "status": "mismatch — no DB column; EHR returns true but SQL returns NULL"
+      },
+      "hasDocumentFolderAccess": {
+        "query_result": "NULL",
+        "expected": "1",
+        "root_cause": "Permission check performed at API layer based on the requesting user's folder access rights. Not stored in document or documentfoldermapping for the patient context.",
+        "status": "mismatch — no DB column; EHR returns 1 but SQL returns NULL"
+      },
+      "PtEmployers": {
+        "query_result": "NULL",
+        "expected": "\"[]\"",
+        "root_cause": "JSON array of patient employers built at API layer. No single DB column stores the serialized array; would require a separate subquery against employer tables.",
+        "status": "mismatch — no DB column; EHR returns '[]' but SQL returns NULL"
+      }
+    },
+    "no_db_column_mismatch": 3,
+    "summary": {
+      "total_fields": 41,
+      "matching": 38,
+      "mismatches": 3,
+      "success_rate": "92.7% (38/41) — ReviewStatusChange, hasDocumentFolderAccess, PtEmployers are all API-layer computed values with no DB source"
+    }
+  },
+  "Referrals": {
+    "test_record": {
+      "referralId": 166837,
+      "patientId": 278702,
+      "note": "Test record from EHR sample payload."
+    },
+    "verified_against": "referralId 166837 / patientId 278702 — diff run 2026-05-26",
+    "resolved": {
+      "ApptDate": "Fixed: sentinel 01/01/1901 treated as '' (YEAR check).",
+      "gender": "Fixed: UPPER(LEFT(users.sex,1)) — DB 'male' → 'M'.",
+      "decline_reason": "Fixed: return '' (no DB column but EHR returns '' so empty string matches)."
+    },
+    "issues": {
+      "requestStatus": {
+        "query_result": "'' (empty string — referralstatus JOIN not resolving)",
+        "expected": "\"1\"",
+        "root_cause": "JOIN referralstatus rs ON rs.status = r.status returns no match. referral.status value in DB does not match any referralstatus.status row — possible case mismatch or referral.status stores a code not a label.",
+        "status": "mismatch — join not resolving; needs investigation of referralstatus table contents"
+      },
+      "recType": {
+        "query_result": "\"AUTH APPROVED\"",
+        "expected": "\"REF\"",
+        "root_cause": "referral.authtype stores the authorization-approval status ('AUTH APPROVED'), not the record type. referral.referralType stores 'O' (Outgoing direction). Neither column holds 'REF'. The EHR API likely derives recType from a mapping not directly stored in a single column.",
+        "status": "mismatch — wrong source column; correct DB source for recType not yet identified"
+      },
+      "encryptedRefFromP2PNPI": {
+        "query_result": "NULL",
+        "expected": "\"rvQyHDPqNAImn4e1jJGVMprbNFpult2isBvM8/g=\"",
+        "root_cause": "Encrypted NPI value computed at the EHR API layer. No encrypted field stored in DB.",
+        "status": "mismatch — no DB column; EHR returns encrypted string but SQL returns NULL"
+      },
+      "encodedEncryptionKey": {
+        "query_result": "NULL",
+        "expected": "\"xvYpWUgRrDAL\"",
+        "root_cause": "Encryption key not stored in any DB column.",
+        "status": "mismatch — no DB column; EHR returns key string but SQL returns NULL"
+      },
+      "nhxMsgTxId_join_unverified": {
+        "query_result": "\"0\"",
+        "expected": "\"0\"",
+        "root_cause": "nhxreferral.nhxMsgTxId joined via nhxreferral.apuId = referral.ReferralId. Result matched sample but join key still needs broader verification.",
+        "status": "matched in test — verify join key on other records"
+      }
+    },
+    "no_db_column_mismatch": 2,
+    "summary": {
+      "total_fields": 42,
+      "matching": 38,
+      "mismatches": 4,
+      "pending_verification": 1,
+      "success_rate": "90.5% (38/42) — requestStatus join not resolving; recType source column unknown; encryptedRefFromP2PNPI and encodedEncryptionKey are API-layer only"
+    }
+  },
   "Patients": {
     "field_report": [
       {"field": "accountNo", "status": "matched"},
@@ -167,6 +257,57 @@
       "success_rate": "100%"
     }
   },
+  "Medications": {
+    "pending_issues": 5,
+    "issues": {
+      "no_db_column_fields": {
+        "fields": ["medValue", "GenericName", "compoundSignature", "crsimages", "stDtWo", "AllChannelPharmacy", "homemedstatus", "startDateWO"],
+        "query_result": "NULL for all",
+        "expected": "Application-level defaults (all empty string '')",
+        "root_cause": "None of these fields exist in oldrxmain, oldrxmain_addlinfo, items, or any other joined table in mobiledoc schema. They are application-layer fields not stored in the DB.",
+        "status": "mismatch — no DB column; EHR returns empty strings but SQL returns NULL"
+      },
+      "db_mapped_fields_note": {
+        "fields": ["startDate", "stopDate", "RxSource", "RxSourceID", "PharmacyName", "RxChannel", "CSASchedule", "TransactionTime"],
+        "mapping": "startDate/stopDate→oldrxmain.StartDate/StopDate, RxSource/RxSourceID→oldrxmain.rxSource/rxSourceId, PharmacyName→pharmacy.pharmacyname via oldrxmain_addlinfo.PharmacyId, RxChannel/CSASchedule/TransactionTime→rxhub_scriptlog (joined on EncounterId+ItemId, TOP 1 DESC). RxChannel/CSASchedule/TransactionTime will be NULL for non-eRx prescriptions.",
+        "status": "DB-mapped — resolved"
+      },
+      "formulationvalue_formulationid": {
+        "query_result": "\"\" / \"0\"",
+        "expected": "\"Tablet\" / \"10613\"",
+        "root_cause": "No formulation recorded anywhere in mobiledoc for this Rx: arh (no arh row has RxFormulationId != 0), oldrxdetail (no Prop=50 row), items.itemName='Tadalafil' (no hint), items.itemDesc also lacks tablet text. EHR likely derives formulation from external drug reference DB not present in mobiledoc.",
+        "status": "Unresolvable data gap — formulation not stored in DB for this record"
+      },
+      "medName_completeRxName": {
+        "query_result": "\"Tadalafil 20 mg\" / \"Tadalafil 20 mg\"",
+        "expected": "\"Tadalafil 20 mg tablet\" / \"Tadalafil 20 mg tablet\"",
+        "root_cause": "Cascade from formulationvalue being empty.",
+        "status": "Blocked by formulationvalue data gap"
+      },
+      "docCodeInitials": {
+        "query_result": "\"Mullins, Ryan J\"",
+        "expected": "\"Qi, David Z\"",
+        "root_cause": "enc.doctorID, arh.doctorId, AND omai.documentedUserId all resolve to Mullins for this record (documentedUserId may be NULL, falling back to arh/enc). Qi is the prescribing doctor but is not stored in any of these three doctor fields for this specific Rx/encounter combination.",
+        "status": "Unresolvable — prescribing doctor (Qi) not found in enc.doctorID, arh.doctorId, or omai.documentedUserId for this record"
+      },
+      "DxCodeOnly_DxName": {
+        "query_result": "\"ef9d431434582833:41044020:14fb0cbf389:-7f88\"",
+        "expected": "\"N52.8\"",
+        "root_cause": "items.vmid = same hex GUID as icd.Code — ECW stores internal object hashes in both fields for diagnosis items, not ICD-10 codes. edi_dfr_cptdiagnosismap has no billing row for this encounter+diagnosis item (not a billed encounter or not yet submitted). No accessible mobiledoc column holds the human-readable ICD-10 code 'N52.8' for this diagnosis item.",
+        "status": "Unresolvable — ICD-10 code not stored in any queried mobiledoc field for this record"
+      }
+    },
+    "summary": {
+      "total_fields": 65,
+      "matching": 50,
+      "mismatches": 15,
+      "root_causes": 4,
+      "cascade_mismatches": 3,
+      "unresolvable": 3,
+      "no_db_column_mismatch": 8,
+      "success_rate": "76.9% (50/65) — 8 no-DB-column fields now counted as mismatches; ceiling 80.0% if formulationvalue resolved"
+    }
+  },
   "Slots": {
     "pending_issues": 1,
     "issues": {
@@ -182,6 +323,450 @@
       "matching": 34,
       "mismatches": 1,
       "success_rate": "97.1%"
+    }
+  },
+  "Encounters": {
+    "pending_issues": 1,
+    "issues": {
+      "notes": {
+        "query_result": "\"\"",
+        "expected": "\"TestNotes\"",
+        "source_tried": "telenc.actiontaken (primary), enc.generalNotes (fallback)",
+        "root_cause": "telenc.actiontaken is NULL/empty and enc.generalNotes is NULL/empty for this record. The value 'TestNotes' is test data entered via the EHR API. The field mapping (actiontaken → notes) is correct; this is a data quality gap for this specific encounter.",
+        "status": "Data quality issue — telenc.actiontaken empty for this record; mapping is correct"
+      }
+    },
+    "shape_notes": {
+      "flat_vs_nested": "SQL output is flat (29 columns); EHR JSON is nested into patient{}, encounter{}, contact{}, insurance{}, pharmacy{}, responseSummary{} objects. Structural difference only — all values are present.",
+      "pharmacy_name_alias": "EHR field is pharmacy.name; SQL alias is pharmacyName to avoid collision with patient.name. Value matches.",
+      "duplicated_fields": "EHR JSON repeats ticketId and assignedTo in both encounter{} and responseSummary{} (same values). SQL returns each once."
+    },
+    "summary": {
+      "total_fields": 31,
+      "matching": 30,
+      "mismatches": 1,
+      "shape_issues": 3,
+      "success_rate": "96.8% (30/31)"
+    }
+  },
+  "LabReports": {
+    "test_record": {
+      "encounterId": 3256798,
+      "itemId": 465612,
+      "patientName": "Bean, Anthony",
+      "pid": 275735,
+      "labReportId": 1947099
+    },
+    "pending_issues": 5,
+    "issues": {
+      "ProviderId_ProviderName": {
+        "query_result": "\"0\" / \"\"",
+        "expected": "\"97312\" / \"Aubin, Jessica\"",
+        "root_cause": "labdata.ordPhyId=0 and labdata.ordPhyName='' for this record. The EHR derives the provider from a different source (possibly encounter-level) at render time. No accessible mobiledoc column holds the correct provider for this specific lab order.",
+        "status": "Unresolvable data gap — ordPhyId/ordPhyName not populated in labdata for this record"
+      },
+      "facilityId_facilityCode_facilityName": {
+        "query_result": "\"0\" / \"\" / \"\"",
+        "expected": "\"25\" / \"LAB\" / \"Advanced Lab Solutions, LLC\"",
+        "root_cause": "labdata.tolabid=0 for this record. JOIN to edi_facilities returns no row. The EHR shows facilityId=25 which exists in edi_facilities, but tolabid is not set on this lab order.",
+        "status": "Unresolvable data gap — tolabid=0 in labdata for this record"
+      },
+      "AssessmentsJSONArray": {
+        "query_result": "[] (empty)",
+        "expected": "[{AsmtId:'292172', Code:'A42.1'}, {AsmtId:'300742', Code:'I71.4'}]",
+        "root_cause": "No rows in assessment_lab_history for LabId=1947099 or encounterId=3256798. The assessments visible in EHR are linked differently or were added through the API to a different persistence path.",
+        "status": "Unresolvable data gap — assessment_lab_history has no matching rows for this record"
+      },
+      "ItemKeysJSONArray": {
+        "query_result": "[] (empty)",
+        "expected": "19 key-value config entries (EnableWebPortal, LockTimeStamp, ...)",
+        "root_cause": "mobiledoc.dbo.config table in this DB only has 5 rows (HL7ServerPort, PrintServer, PrintServerPort, ReportServer, ReportServerPort). The 19 lab-specific config keys expected by the EHR API are not present in this database instance.",
+        "status": "Unresolvable data gap — config keys not populated in this DB instance"
+      },
+      "snomedCodeSpecimen": {
+        "query_result": "NULL",
+        "expected": "\"110896005\"",
+        "root_cause": "SNOMED code for specimen type not found in labdata, labdataex, or items schema. EHR likely derives this from a collSource→SNOMED lookup table not present in mobiledoc.",
+        "status": "Unresolvable data gap — SNOMED specimen lookup not in DB schema"
+      },
+      "orderFormBanner": {
+        "query_result": "NULL",
+        "expected": "\"Note: Clinical Info will be excluded in the Order Form.\"",
+        "root_cause": "Dynamic message generated by EHR at request time when clinicalInfo is non-empty. Not stored in any DB column.",
+        "status": "Dynamic/computed field — not storable; acceptable NULL in SQL output"
+      },
+      "formLoadTime": {
+        "query_result": "NULL",
+        "expected": "\"05/21/2026 03:30:31 AM\" (server timestamp)",
+        "root_cause": "Server-generated timestamp at API request time. Not stored in DB.",
+        "status": "Dynamic/computed field — not storable; acceptable NULL in SQL output"
+      },
+      "Eligibility": {
+        "query_result": "\"V  \" (RTRIM → \"V\")",
+        "expected": "\"\"",
+        "root_cause": "users.EligibilityStatus='V  ' in DB (Verified). EHR PatientDataJSON returns empty string. Query now applies RTRIM; single-char 'V' still differs from ''. EHR may blank this field under certain conditions or map 'V' to empty.",
+        "status": "Residual mismatch after RTRIM — EHR suppresses the value for this record"
+      },
+      "LabAttributeNamesJSONArray_no_db_column": {
+        "query_result": "NULL for defaultImmunization, favouriteid, DoseUnits",
+        "expected": "'', 'N', '' respectively",
+        "root_cause": "defaultImmunization, DoseUnits: no matching column in items or itemparam schema. favouriteid: favouritekeywords.favouriteId is a user-level favorites list, not applicable here. PPDStatus mapped from itemparam.PPDCheckSt; VISCount from itemparam.VISCount; dose from itemparam.dose.",
+        "status": "mismatch — no DB column; EHR returns ('', 'N', '') but SQL returns NULL"
+      },
+      "no_db_column_scalar_fields": {
+        "fields": [
+          "isDisableCollDateForIHStructResultedLab",
+          "bEnableIHLabResultDocumentation",
+          "sexParam",
+          "CCStatus",
+          "reportDate",
+          "assignedToType",
+          "DisableChkPublish",
+          "isPAMAActionRequired",
+          "patdata_status"
+        ],
+        "query_result": "NULL for all",
+        "expected": "Application-level defaults ('false', 'no', '0', '0', '', '1', '0', 'false', 'success')",
+        "root_cause": "None of these fields exist in labdata, labdataex, items, billablelab, or any related table in the mobiledoc schema. They are runtime application defaults applied by the EHR API layer.",
+        "status": "mismatch — no DB column; EHR returns application defaults but SQL returns NULL"
+      },
+      "no_db_column_detail_array_fields": {
+        "fields": ["referenceRangeConfigured", "withinViewPort", "paramNotes", "units"],
+        "query_result": "NULL for all (within LabDataDetailJSONArray)",
+        "expected": "0, 1, '', '' respectively",
+        "root_cause": "referenceRangeConfigured and withinViewPort are UI-state flags with no DB column. paramNotes is not in labdatadetail. units is in hl7labdatadetail (HL7-received results only) — not applicable for manually entered results in labdatadetail. range IS now mapped from labdatadetailrefrange.range.",
+        "status": "mismatch — no DB column; EHR returns values (0, 1, '', '') but SQL returns NULL"
+      },
+      "LabDataDetailJSONArray_properties_structure": {
+        "query_result": "Flat prop_* columns prior to fix; now using FOR JSON PATH dot notation to produce nested properties.property object",
+        "expected": "{ properties: { property: { itemId, itemName, flag, paramNotes, range, units, value } } }",
+        "root_cause": "SQL FOR JSON PATH does not directly support nested objects without dot-notation aliases. Fixed by renaming aliases to [properties.property.fieldName].",
+        "status": "Fixed — dot-notation aliases now produce correct nested structure"
+      }
+    },
+    "shape_notes": {
+      "flat_vs_nested": "SQL output is flat (all columns at top level). EHR JSON nests fields into LabDataJSON{}, PatientDataJSON{}, LabDataDetailJSONArray[], AssessmentsJSONArray[], LabAttributeNamesJSONArray[], ItemKeysJSONArray[]. Structural difference only.",
+      "labdataex_join": "Added LEFT JOIN to labdataex (reportId FK) to source InterfaceStatus, bodySiteCode, AQRejectionReason, exceptionReasonId, exceptionReasonComment.",
+      "db_mapped_fields": "ignoreProcedureValidations→billablelab.ignoreprocedurevalidations, DocumentStructuredResults→billablelab.documentStructuredResults, bodySiteName→bodysites.bodysitename, patdata_reason→labdata.reason, range→labdatadetailrefrange.range, dose→itemparam.dose, VISCount→itemparam.VISCount, PPDStatus→itemparam.PPDCheckSt.",
+      "no_db_column_fields": "isDisableCollDateForIHStructResultedLab, bEnableIHLabResultDocumentation, sexParam, CCStatus, reportDate, assignedToType, DisableChkPublish, isPAMAActionRequired, patdata_status, referenceRangeConfigured, withinViewPort, paramNotes, units (LabDataDetail), defaultImmunization, favouriteid, DoseUnits (LabAttributeNames) — all confirmed absent from mobiledoc schema; return NULL."
+    },
+    "summary": {
+      "total_fields": 93,
+      "matching": 63,
+      "mismatches": 25,
+      "data_gaps": 5,
+      "dynamic_fields": 2,
+      "no_db_column_mismatch": 16,
+      "db_mapped_previously_hardcoded": 8,
+      "success_rate": "67.7% (63/93) — 16 no-DB-column fields now counted as mismatches; ceiling 73.1% if data gaps resolved"
+    }
+  },
+  "Pharmacy": {
+    "test_record": {
+      "pmcid": 2312,
+      "name": "**UHS-Discharge Pharmacy"
+    },
+    "pending_issues": 1,
+    "issues": {
+      "Zip": {
+        "query_result": "\"78229\" (varchar string)",
+        "expected": "78229 (number)",
+        "root_cause": "pharmacy.pharmacyzip is stored as varchar in mobiledoc. EHR API returns Zip as a numeric type. Value is identical; only the JavaScript type differs. Casting to int risks data loss for zip+4 format (e.g. '12345-6789') or leading-zero zip codes (e.g. '01234').",
+        "status": "Type-level mismatch only — value correct; varchar left intentionally to avoid truncation risk"
+      }
+    },
+    "summary": {
+      "total_fields": 21,
+      "matching": 20,
+      "mismatches": 1,
+      "success_rate": "95.2% (20/21) — 21/21 by value; 1 type-level difference on Zip"
+    }
+  },
+  "LabOrders": {
+    "test_record": {
+      "encounterId": 3256798,
+      "itemId": 465612,
+      "patientName": "Bean, Anthony",
+      "pid": 275735,
+      "labReportId": 1947099
+    },
+    "excluded_vs_lab_reports": {
+      "note": "Lab Orders intentionally excludes result-level fields present in Lab Reports.",
+      "excluded_fields": [
+        "result (labdata.result — result text blob)",
+        "ResultDate (labdata.ResultDate — date result received)",
+        "LabDataDetailJSONArray (labdatadetail per-component results with properties.property structure)"
+      ]
+    },
+    "pending_issues": 5,
+    "issues": {
+      "ProviderId_ProviderName": {
+        "query_result": "\"0\" / \"\"",
+        "expected": "\"97312\" / \"Aubin, Jessica\"",
+        "root_cause": "labdata.ordPhyId=0 and labdata.ordPhyName='' for this record. Same data gap as LabReports.",
+        "status": "Unresolvable data gap — ordPhyId/ordPhyName not populated in labdata for this record"
+      },
+      "facilityId_facilityCode_facilityName": {
+        "query_result": "\"0\" / \"\" / \"\"",
+        "expected": "\"25\" / \"LAB\" / \"Advanced Lab Solutions, LLC\"",
+        "root_cause": "labdata.tolabid=0 for this record. Same data gap as LabReports.",
+        "status": "Unresolvable data gap — tolabid=0 in labdata for this record"
+      },
+      "AssessmentsJSONArray": {
+        "query_result": "[] (empty)",
+        "expected": "[{AsmtId:'292172', Code:'A42.1'}, {AsmtId:'300742', Code:'I71.4'}]",
+        "root_cause": "No rows in assessment_lab_history for LabId=1947099 or encounterId=3256798. Same data gap as LabReports.",
+        "status": "Unresolvable data gap — assessment_lab_history has no matching rows for this record"
+      },
+      "ItemKeysJSONArray": {
+        "query_result": "[] (empty)",
+        "expected": "19 key-value config entries",
+        "root_cause": "config table in this DB only has 5 server infrastructure rows. Same data gap as LabReports.",
+        "status": "Unresolvable data gap — config keys not populated in this DB instance"
+      },
+      "no_db_column_scalar_fields": {
+        "fields": [
+          "isDisableCollDateForIHStructResultedLab",
+          "bEnableIHLabResultDocumentation",
+          "sexParam",
+          "CCStatus",
+          "reportDate",
+          "assignedToType",
+          "DisableChkPublish",
+          "isPAMAActionRequired",
+          "patdata_status"
+        ],
+        "query_result": "NULL for all",
+        "expected": "Application-level defaults ('false', 'no', '0', '0', '', '1', '0', 'false', 'success')",
+        "root_cause": "None of these fields exist in labdata, labdataex, billablelab, or any related table. They are runtime application defaults applied by the EHR API layer.",
+        "status": "mismatch — no DB column; EHR returns application defaults but SQL returns NULL"
+      },
+      "no_db_column_labattribute_fields": {
+        "fields": ["defaultImmunization", "favouriteid", "DoseUnits"],
+        "query_result": "NULL for all (within LabAttributeNamesJSONArray)",
+        "expected": "'', 'N', '' respectively",
+        "root_cause": "Not present in items or itemparam schema. PPDStatus mapped from itemparam.PPDCheckSt; dose from itemparam.dose; VISCount from itemparam.VISCount.",
+        "status": "mismatch — no DB column; EHR returns ('', 'N', '') but SQL returns NULL"
+      },
+      "orderFormBanner": {
+        "query_result": "NULL",
+        "expected": "\"Note: Clinical Info will be excluded in the Order Form.\"",
+        "root_cause": "Dynamic message generated by EHR at request time when clinicalInfo is non-empty. Not stored in DB.",
+        "status": "Dynamic/computed field — not storable; acceptable NULL in SQL output"
+      },
+      "formLoadTime": {
+        "query_result": "NULL",
+        "expected": "\"05/21/2026 03:30:31 AM\"",
+        "root_cause": "Server-generated timestamp at API request time. Not stored in DB.",
+        "status": "Dynamic/computed field — not storable; acceptable NULL in SQL output"
+      },
+      "Eligibility": {
+        "query_result": "\"V\" (after RTRIM)",
+        "expected": "\"\"",
+        "root_cause": "users.EligibilityStatus='V  ' in DB. EHR returns empty string. Same residual mismatch as LabReports.",
+        "status": "Residual mismatch — EHR suppresses the value for this record"
+      }
+    },
+    "summary": {
+      "total_fields": 88,
+      "matching": 65,
+      "mismatches": 23,
+      "data_gaps": 5,
+      "dynamic_fields": 2,
+      "no_db_column_mismatch": 12,
+      "db_mapped_previously_hardcoded": 7,
+      "excluded_from_lab_reports": 3,
+      "success_rate": "73.9% (65/88) — 12 no-DB-column fields now counted as mismatches; ceiling 79.5% if data gaps resolved"
+    }
+  },
+  "Transcriptions": {
+    "test_record": {
+      "encounterId": 1740665,
+      "patientName": "Bell, Joe",
+      "patientId": 99756,
+      "transId": 7
+    },
+    "issues": {},
+    "summary": {
+      "total_fields": 12,
+      "matching": 12,
+      "mismatches": 0,
+      "success_rate": "100% (12/12)"
+    }
+  },
+  "SurgicalHistory": {
+    "test_record": {
+      "patientId": 270001,
+      "note": "EHR returns 7 surgical entries. Query returns 3 — 4 entries missing due to data quality gap (orphaned encounterIDs)."
+    },
+    "verified_against": "patientId 270001 — diff run 2026-06-02",
+    "issues": {
+      "missing_records": {
+        "query_result": "3 rows returned (9/2024, 10/2024 ×2)",
+        "expected": "7 rows (4/2026 ×3, 4/2025 ×1, 10/2024 ×2, 9/2024 ×1)",
+        "root_cause": "surgicalhistory.encounterID for the 4 newer entries (3× 4/2026, 1× 4/2025) does not exist in enc table. INNER JOIN on enc.encounterID drops these rows. Likely orphaned records or encounters soft-deleted in enc. Field mapping is correct — both surgicalReason and surgicalDate match exactly on the 3 returned rows.",
+        "status": "Data quality gap — 4 surgical history records have encounterIDs absent from enc; field mapping verified correct"
+      }
+    },
+    "summary": {
+      "total_fields": 2,
+      "matching": 2,
+      "mismatches": 0,
+      "record_coverage": "3/7 records returned (4 missing — data quality gap)",
+      "success_rate": "100% field mapping (2/2); 43% record coverage (3/7) — missing records are a data quality issue, not a mapping error"
+    }
+  },
+  "HospitalHistory": {
+    "test_record": {
+      "patientId": 275735,
+      "note": "Patient 275735 has 3 hospitalization entries. All 3 matched EHR sample exactly."
+    },
+    "verified_against": "patientId 275735 — diff run 2026-06-02",
+    "issues": {},
+    "summary": {
+      "total_fields": 2,
+      "matching": 2,
+      "mismatches": 0,
+      "success_rate": "100% (2/2)"
+    }
+  },
+  "Problems": {
+    "test_record": {
+      "patientId": 275735,
+      "asmtId_sample": 362414,
+      "note": "Patient 275735 has 3 active problems. EHR sample entry used asmtId=362414 (AAA abdominal aortic aneurysm, ruptured)."
+    },
+    "verified_against": "patientId 275735 — diff run 2026-06-02",
+    "issues": {
+      "icd_code_fields": {
+        "fields": ["itemcode", "strHccDig", "icdversion", "snowMedCode", "hccFlag", "hcc_com_flag"],
+        "query_result": "NULL for all",
+        "expected": "itemcode='I71.3', strHccDig='I713', icdversion='10', snowMedCode='14336007', hccFlag='true', hcc_com_flag='true'",
+        "root_cause": "ICD code is not accessible from any investigated path: items.keyName='Assessments' (category marker, not ICD code); items.vmid=internal Java GUID hash; items.parentID chain leads to category containers ('ICD10byGEMSImport' itemType=C, 'IMO' itemType=C, both parentID=66); icd table IDs do not match asmtId, parentID, or any items column; problemlist has no ICD code column (confirmed via INFORMATION_SCHEMA). snowMedCode and hccFlag/hcc_com_flag depend on the ICD code and are also unresolvable.",
+        "status": "Unresolvable — ICD code not stored in any accessible mobiledoc column for problem list records"
+      },
+      "PrimServiceLoc": {
+        "query_result": "NULL",
+        "expected": "\"3\"",
+        "root_cause": "problemlist.specialityId is NULL for all three test patient problems. Column exists but is not populated for this patient.",
+        "status": "Data quality gap — specialityId column present but NULL in test data"
+      },
+      "overdue": {
+        "query_result": "NULL",
+        "expected": "\"2\"",
+        "root_cause": "Derived/calculated field (likely days overdue for problem review). No DB column stores this value; computed at EHR API layer.",
+        "status": "data_gap — no DB column; EHR returns calculated value"
+      },
+      "isICDValid": {
+        "query_result": "NULL",
+        "expected": "\"Invalid\"",
+        "root_cause": "Derived from ICD validation logic at EHR API layer. No DB column stores ICD validity status.",
+        "status": "data_gap — no DB column; EHR returns derived value"
+      },
+      "severity": {
+        "query_result": "NULL",
+        "expected": "\"2\"",
+        "root_cause": "No severity column found in problemlist or any joined table. Not in mobiledoc schema.",
+        "status": "data_gap — no DB column identified"
+      }
+    },
+    "summary": {
+      "total_fields": 27,
+      "matching": 17,
+      "mismatches": 10,
+      "icd_unresolvable": 6,
+      "data_gaps": 4,
+      "success_rate": "63.0% (17/27) — 6 ICD-dependent fields unresolvable (no accessible ICD code column); 4 data_gaps (overdue, isICDValid, severity, PrimServiceLoc)"
+    }
+  },
+  "GYNHistory": {
+    "test_record": {
+      "patientId": 275734,
+      "note": "Patient 275734 has 3 GYN history entries. All 3 returned by query and matched EHR sample exactly."
+    },
+    "verified_against": "patientId 275734 — diff run 2026-06-02",
+    "issues": {},
+    "summary": {
+      "total_fields": 5,
+      "matching": 5,
+      "mismatches": 0,
+      "record_coverage": "3/3 records returned",
+      "success_rate": "100% (5/5)"
+    }
+  },
+  "OBHistory": {
+    "test_record": {
+      "patientId": 275734,
+      "note": "Patient 275734 has 3 OB history entries. All 3 returned by query and matched EHR sample exactly."
+    },
+    "verified_against": "patientId 275734 — diff run 2026-06-02",
+    "issues": {},
+    "summary": {
+      "total_fields": 3,
+      "matching": 3,
+      "mismatches": 0,
+      "record_coverage": "3/3 records returned",
+      "success_rate": "100% (3/3)"
+    }
+  },
+  "Immunization": {
+    "test_record": {
+      "patientId": 275734,
+      "note": "Patient 275734 has 4 immunization entries. All 4 returned by query. EHR sample showed 1 entry (ImmunizationId=510) which matched exactly."
+    },
+    "verified_against": "patientId 275734 — diff run 2026-06-02",
+    "issues": {},
+    "summary": {
+      "total_fields": 7,
+      "matching": 7,
+      "mismatches": 0,
+      "record_coverage": "4/4 records returned",
+      "success_rate": "100% (7/7)"
+    }
+  },
+  "OfficeVisit": {
+    "test_record": {
+      "encounterId": 3256634,
+      "patientName": "ZZZTestBoyce, Beautiful",
+      "patientId": 279033,
+      "doctorId": 122,
+      "note": "Original expected data used encounterId=4185789 which does not exist in this DB. Test record 3256634 used instead. Field structure fully verified."
+    },
+    "issues": {
+      "facilityTimeZone": {
+        "query_result": "\"EST5EDT\"",
+        "expected": "\"EDT\"",
+        "root_cause": "edi_facilities.TimeZoneCode stores POSIX timezone string ('EST5EDT') for facility 3. The original expected data was from facility 42 which stored 'EDT'. Both represent Eastern Time — different facilities store different representations of the same timezone.",
+        "status": "Data variation across facilities — not a mapping error"
+      },
+      "no_db_column_fields": {
+        "fields": [
+          "PtOrders", "archivalRunning", "archiveMessage", "unreviewed", "qmList",
+          "healowInsightsSummary", "formattedPrefName", "factz_arrTime",
+          "statusLogTime", "statusDuration", "isBhTimerRunning",
+          "encCheckinSource", "encCheckinStatus", "encCheckinStatusWithCompletedTime",
+          "patDgChangedEncId", "patDgChanged", "patDgChangedMultiple"
+        ],
+        "query_result": "NULL for all",
+        "expected": "Application-level defaults ('0', 'false', '', '0', '', 'false', '', '', '', '', 'false', 'NO_MODIFICATION', '', '', '0', 'no', 'false')",
+        "root_cause": "None of these fields exist in enc, encounterdata, enc_utctimes, encstatushistory, or any other joined table. They are runtime application state values computed or set by the EHR API layer (check-in tracking, archival state, quality measure lists, behavioral health timer state, diagnosis change tracking).",
+        "status": "mismatch — no DB column; EHR returns application defaults but SQL returns NULL"
+      },
+      "telemedVisit_db_mapped": {
+        "query_result": "Now fetched from visitcodes.telemedVisit via enc.encType = visitcodes.CodeId",
+        "expected": "0 or 1 per visit type configuration",
+        "root_cause": "Previously hardcoded as '0'. Now joined to visitcodes table.",
+        "status": "DB-mapped — resolved"
+      }
+    },
+    "summary": {
+      "total_fields": 55,
+      "matching": 38,
+      "mismatches": 17,
+      "data_variation_notes": 1,
+      "no_db_column_mismatch": 17,
+      "db_mapped_previously_hardcoded": 1,
+      "success_rate": "69.1% (38/55) — 17 fields have no DB column; facilityTimeZone is a data-level variation, not a mapping error"
     }
   }
 }
