@@ -1,0 +1,45 @@
+{
+  "encounterId": "3256805",
+  "patient": {
+    "patientId": "275735",
+    "name": "Bean, Anthony",
+    "dob": "04/19/1976",
+    "sex": "female",
+    "age": "50 Y"
+  },
+  "encounter": {
+    "date": "2026-04-16",
+    "time": "18:19:00",
+    "visitType": "TEL",
+    "encType": "2",
+    "reason": "HIMS-ABN not scanned",
+    "doctorName": "Mally, Abhijith",
+    "assignedTo": "Interactly Service Account, Interactly Service Account",
+    "ticketId": "993399",
+    "facilityName": "Advanced Urology Institute"
+  },
+  "contact": {
+    "phone": "802-383-8482",
+    "email": "abbean19001@gmail.com",
+    "textEnabled": "1"
+  },
+  "insurance": {
+    "primaryInsurance": "Blue Cross Blue Shield PPO"
+  },
+  "pharmacy": {
+    "name": "*DAVILA CD PHARMACY, LLC"
+  },
+  "responseSummary": {
+    "uid": "278645",
+    "userFullName": "Interactly Service Account, Interactly Service Account",
+    "providerName": "Mally, Abhijith D",
+    "ticketId": "993399",
+    "caller": "TestCaller",
+    "message": "TestMessage",
+    "notes": "TestNotes",
+    "priority": "0",
+    "virtualFlag": "1",
+    "assignedTo": "Interactly Service Account, Interactly Service Account",
+    "pharmacyId": "3118"
+  }
+}

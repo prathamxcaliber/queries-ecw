@@ -1,12 +1,14 @@
 # ECW Slot Data Catalog
 
-> **Source:** ECW EHR scheduling API — encounters and workhours
+> **Source:** ECW EHR scheduling API — encounters and workhours  
+> **Purpose:** Knowledge base for AI agents — describes all fields returned in scheduling slot and work-hour payloads.  
+> **Note:** "Flag string" = a string holding `"Y"/"N"` as a boolean equivalent. Sentinel dates (e.g. `"1900-01-01"`) indicate the event has not yet occurred.
 
 ---
 
 ## 1. `Encounter` (booked / open appointment slot)
 
-| Field          | TypeScript Type | Example                     | Notes                                               |
+| Field          | JSON Type       | Example                     | Notes                                               |
 | -------------- | --------------- | --------------------------- | --------------------------------------------------- |
 | `encounterId`  | `string`        | `"ENC-12345"`               | Unique encounter ID from ECW                        |
 | `id`           | `string`        | `"12345"`                   | Alternate encounter identifier                      |
@@ -39,7 +41,7 @@
 
 ## 2. `WorkHour` (provider availability block)
 
-| Field          | TypeScript Type | Example                 | Notes                                      |
+| Field          | JSON Type       | Example                 | Notes                                      |
 | -------------- | --------------- | ----------------------- | ------------------------------------------ |
 | `resourceId`   | `string`        | `"42"`                  | Provider/resource ID                       |
 | `facilityId`   | `string`        | `"10"`                  | Facility ID — `"0"` or empty = invalid     |
@@ -52,3 +54,19 @@
 | `size`         | `number`        | `30`                    | Slot size in minutes                       |
 | `background`   | `string`        | `"#FFFFFF"`             | UI background color                        |
 | `userId`       | `number`        | `42`                    | User ID associated with block              |
+
+---
+
+## Quick-Reference: Code Conventions
+
+| Value | Field | Meaning |
+|---|---|---|
+| `"Y"` | `newPt` | Patient is a new patient |
+| `"VER"` | `status`, `pStatus` | Encounter / patient status verified |
+| `"OF"` | `encType` | Office encounter type |
+| `"11"` | `POS` | Place of Service 11 = physician office |
+| `"0"` / `""` | `facilityId` | Invalid / unset facility — should be filtered out |
+| `"1900-01-01"` | date sentinel | Event has not yet occurred |
+| `true` | `free` | Work-hour block is available for scheduling |
+| `0` | `nWeekDay` | Sunday (0=Sun … 6=Sat) |
+

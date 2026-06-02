@@ -1,7 +1,8 @@
 # Locations Data Catalog
 
 > **Source:** EHR system service location record  
-> **Purpose:** Knowledge base for AI agents — describes all fields returned in a location payload.
+> **Purpose:** Knowledge base for AI agents — describes all fields returned in a location payload.  
+> **Note:** `pos` uses CMS Place of Service codes. `zip` may include ZIP+4 format.
 
 ---
 

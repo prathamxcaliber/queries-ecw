@@ -1,0 +1,30 @@
+[
+  {
+    "surgicalReason": "CT: atrophic R kidney, right renal stones largest 5.4mm, b/l renal cysts, b/l inguinal hernias",
+    "surgicalDate": "4/2026"
+  },
+  {
+    "surgicalReason": "right UDT w/ atrophy, no tumors, left epididymal cysts",
+    "surgicalDate": "4/2026"
+  },
+  {
+    "surgicalReason": "US: 30 cc, atrophic right kidney, numerous left cysts up to 4.8 cm, 3 cm L cyst with internal mass",
+    "surgicalDate": "4/2026"
+  },
+  {
+    "surgicalReason": "ultrasound: 26 g, 2.8 cm left cyst with septation and debris, 4.5 cm left UP cyst, atrophic right kidney",
+    "surgicalDate": "4/2025"
+  },
+  {
+    "surgicalReason": "Scrotal US: right UDT w/ atrophy, no tumors, left epididymal cysts",
+    "surgicalDate": "10/2024"
+  },
+  {
+    "surgicalReason": "CT Urogram: severe atrophic right kidney with small renal stone, numerous small and large left renal cysts, left posterior cyst mildly complex,left renal hypertrophy",
+    "surgicalDate": "10/2024"
+  },
+  {
+    "surgicalReason": "ultrasound: 30 g, atrophic right kidney (7.8 cm), 2.7 cm left renal cyst with debris and septation, 4.2 cm left UP cyst",
+    "surgicalDate": "9/2024"
+  }
+]

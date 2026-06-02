@@ -1,6 +1,8 @@
 # Coverage Data Catalog
 
 > **Source:** EHR system coverage/insurance detail record  
+> **Purpose:** Knowledge base for AI agents — describes all fields returned inside the `InsuranceDetail` object of a coverage payload.  
+> **Note:** "Flag string" = a string that holds `"Y"/"N"` or `"0"/"1"` as a boolean equivalent. "Code string" = a short, controlled-vocabulary string.
 
 ---
 
