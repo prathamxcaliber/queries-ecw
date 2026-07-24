@@ -1,0 +1,26 @@
+{
+  "encounterID": 3257076,
+  "patientId": 278754,
+  "vitals": [
+    { "name": "Inhaled Oxygen Flow Rate", "value": "125", "unit": "Lmin", "isAbnormal": null },
+    { "name": "Temperature",              "value": "90",  "unit": "F",    "isAbnormal": null },
+    { "name": "Heart Rate",               "value": "23",  "unit": "min",  "isAbnormal": null },
+    { "name": "Blood Pressure",           "value": "80",  "unit": "mm Hg","isAbnormal": null },
+    { "name": "Height",                   "value": "60",  "unit": "in",   "isAbnormal": null },
+    { "name": "Weight",                   "value": "80",  "unit": "lbs",  "isAbnormal": null },
+    { "name": "BMI",                      "value": "15.622","unit": "Index","isAbnormal": null },
+    { "name": "Respiratory Rate",         "value": "23",  "unit": "min",  "isAbnormal": null },
+    { "name": "Oxygen Saturation",        "value": "98",  "unit": "%",    "isAbnormal": null },
+    { "name": "Peak Flow",                "value": "45",  "unit": "Imin", "isAbnormal": null },
+    { "name": "Pain Scale",               "value": "8",   "unit": "1-10", "isAbnormal": null },
+    { "name": "Head Circumference",       "value": "56",  "unit": "in",   "isAbnormal": null },
+    { "name": "Vision",                   "value": "66",  "unit": "",     "isAbnormal": null },
+    { "name": "Height (cm)",              "value": "34",  "unit": "cm",   "isAbnormal": null },
+    { "name": "Weight (kg)",              "value": "45",  "unit": "kg",   "isAbnormal": null },
+    { "name": "Weight %",                 "value": "45",  "unit": "%",    "isAbnormal": null },
+    { "name": "BMI %",                    "value": "34",  "unit": "%",    "isAbnormal": null },
+    { "name": "Height %",                 "value": "24",  "unit": "%",    "isAbnormal": null },
+    { "name": "HC %",                     "value": "34",  "unit": "%",    "isAbnormal": null },
+    { "name": "Hearing (Both)",           "value": "Right Ear: 1000:234,2000:244,4000:343,6000:432,Decibels: 25,Left Ear: 1000:234,2000:224,4000:344,6000:334,Decibels: 25", "unit": "", "isAbnormal": null }
+  ]
+}

@@ -20,10 +20,7 @@ WITH target_rx AS (
         orm.LastTaken,
         orm.rxkop,
         orm.rxDrugSource,
-        orm.disconorstopnotes,
-        orm.rxSource,
-        orm.rxSourceId,
-        orm.StopDate
+        orm.disconorstopnotes
     FROM mobiledoc.dbo.oldrxmain orm
     WHERE orm.OldRxId = 5293269
       AND orm.RxOrderNo = 'S2623956190329135240'
@@ -57,9 +54,8 @@ arh_pick AS (
         a.RxDispenseValue,
         a.RxRefillsId,
         a.RxRefillsValue,
-        -- Formulation: primary arh pick first; fall back to any arh row that has one recorded
-        ISNULL(NULLIF(a.RxFormulationId, 0),         af.RxFormulationId)      AS RxFormulationId,
-        ISNULL(NULLIF(a.RxFormulationValue, ''), af.RxFormulationValue)        AS RxFormulationValue
+        a.RxFormulationId,
+        a.RxFormulationValue
     FROM target_rx t
     OUTER APPLY (
         SELECT TOP 1 arh.*
@@ -77,25 +73,6 @@ arh_pick AS (
             ISNULL(arh.LastHistoryDate, arh.encDate) DESC,
             arh.Id DESC
     ) a
-    -- Fallback: best arh row that actually has a formulation (handles records where the
-    -- assessment-matched row is missing formulation but another arh row for the same Rx has it)
-    OUTER APPLY (
-        SELECT TOP 1 arh.RxFormulationId, arh.RxFormulationValue
-        FROM mobiledoc.dbo.assessment_rx_history arh
-        WHERE arh.OldRxId = t.OldRxId
-          AND ISNULL(arh.delFlag, 0) = 0
-          AND ISNULL(arh.RxFormulationId, 0) != 0
-        ORDER BY
-            CASE
-                WHEN arh.AsmtId = t.AssessId THEN 0
-                WHEN arh.encounterId = t.encounterId AND arh.RxItemId = t.ItemId THEN 1
-                WHEN arh.encounterId = t.encounterId THEN 2
-                WHEN arh.RxItemId = t.ItemId THEN 3
-                ELSE 4
-            END,
-            ISNULL(arh.LastHistoryDate, arh.encDate) DESC,
-            arh.Id DESC
-    ) af
 ),
 detail_rows AS (
     SELECT
@@ -139,11 +116,7 @@ dx_pick AS (
     SELECT
         t.OldRxId,
         COALESCE(md.itemName, md_by_name.itemName, it.itemName, '') AS DxNameOnly,
-        -- edi_dfr_cptdiagnosismap.diagnosisCode is the billing-verified ICD-10 path
-        -- items.vmid stores the external identifier (ICD code for diagnosis items)
-        -- icd.Code stores internal ECW GUIDs, NOT human-readable ICD-10 codes
-        -- items.keyName stores the PARENT category name (e.g. "Assessments"), not the code
-        COALESCE(md.code, md_by_name.code, NULLIF(dfr.diagnosisCode, ''), NULLIF(it.vmid, ''), '') AS DxCodeOnly
+        COALESCE(md.code, md_by_name.code, '') AS DxCodeOnly
     FROM target_rx t
     OUTER APPLY (
         SELECT TOP 1 d.ItemId
@@ -153,15 +126,6 @@ dx_pick AS (
     ) d1
     LEFT JOIN mobiledoc.dbo.items it
         ON it.itemID = d1.ItemId
-    OUTER APPLY (
-        SELECT TOP 1 dfr.diagnosisCode
-        FROM mobiledoc.dbo.edi_dfr_cptdiagnosismap dfr
-        WHERE dfr.encounterId = t.encounterId
-          AND dfr.diagnosisItemId = d1.ItemId
-          AND ISNULL(dfr.deleteFlag, 0) = 0
-          AND NULLIF(dfr.diagnosisCode, '') IS NOT NULL
-        ORDER BY dfr.Id DESC
-    ) dfr
     LEFT JOIN mobiledoc.dbo.mcmp_dxcode md
         ON md.itemId = d1.ItemId
     LEFT JOIN mobiledoc.dbo.mcmp_dxcode md_by_name
@@ -187,10 +151,10 @@ prep_user AS (
     FROM mobiledoc.dbo.users u
 )
 SELECT
-    NULL AS medValue,
+    '' AS medValue,
     CONVERT(varchar(20), t.ItemId) AS itemid,
     ISNULL(NULLIF(t.MedicineName, ''), ISNULL(i.itemName, '')) AS itemname,
-    NULL AS GenericName,
+    '' AS GenericName,
     ISNULL(t.ndc_code, '') AS NDC_Code,
 
     COALESCE(a.RxStrengthValue, d.StrengthValue, '') AS strengthvalue,
@@ -199,13 +163,13 @@ SELECT
     COALESCE(
         NULLIF(a.RxFormulationValue, ''),
         NULLIF(d.FormulationValue, ''),
-        CASE WHEN LOWER(COALESCE(i.itemName, i.itemDesc, t.MedicineName, '')) LIKE '%tablet%' THEN 'Tablet' END,
+        CASE WHEN LOWER(COALESCE(i.itemName, t.MedicineName, '')) LIKE '%tablet%' THEN 'Tablet' END,
         ''
     ) AS formulationvalue,
     CONVERT(varchar(20), COALESCE(
         NULLIF(a.RxFormulationId, 0),
         NULLIF(d.FormulationID, 0),
-        CASE WHEN LOWER(COALESCE(i.itemName, i.itemDesc, t.MedicineName, '')) LIKE '%tablet%' THEN 10613 END,
+        CASE WHEN LOWER(COALESCE(i.itemName, t.MedicineName, '')) LIKE '%tablet%' THEN 10613 END,
         0
     )) AS formulationid,
 
@@ -228,8 +192,8 @@ SELECT
     CONVERT(varchar(20), COALESCE(a.RxRefillsId, d.RefillsID, 0)) AS refillsid,
 
     ISNULL(t.rxNotes, '') AS notes,
-    ISNULL(CONVERT(varchar(10), t.StartDate, 101), '') AS startDate,
-    ISNULL(CONVERT(varchar(10), t.StopDate, 101), '') AS stopDate,
+    '' AS startDate,
+    '' AS stopDate,
     ISNULL(CONVERT(varchar(10), t.StartDate, 101), '') AS StartDate,
 
     CASE
@@ -243,8 +207,8 @@ SELECT
     t.RxOrderNo AS RxOrderNo,
     CONVERT(varchar(20), t.OldRxId) AS OldRxId,
 
-    ISNULL(t.rxSource, '') AS RxSource,
-    ISNULL(t.rxSourceId, 0) AS RxSourceID,
+    '' AS RxSource,
+    0 AS RxSourceID,
     ISNULL(t.rxNotes, '') AS RxNotes,
 
     COALESCE(
@@ -258,29 +222,27 @@ SELECT
             WHEN COALESCE(
                 NULLIF(a.RxFormulationValue, ''),
                 NULLIF(d.FormulationValue, ''),
-                CASE WHEN LOWER(COALESCE(i.itemName, i.itemDesc, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
+                CASE WHEN LOWER(COALESCE(i.itemName, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
                 ''
             ) <> ''
                 THEN ' ' + LOWER(COALESCE(
                     NULLIF(a.RxFormulationValue, ''),
                     NULLIF(d.FormulationValue, ''),
-                    CASE WHEN LOWER(COALESCE(i.itemName, i.itemDesc, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
+                    CASE WHEN LOWER(COALESCE(i.itemName, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
                     ''
                 ))
             ELSE ''
         END AS medName,
 
-    -- documentedUserId on oldrxmain_addlinfo = doctor who signed/prescribed the Rx
-    -- arh.doctorId and enc.doctorID as fallbacks (both may resolve to a different doctor)
-    ISNULL(doc_omai.docCodeInitials, ISNULL(doc_arh.docCodeInitials, ISNULL(doc_enc.docCodeInitials, ''))) AS docCodeInitials,
+    ISNULL(doc_arh.docCodeInitials, ISNULL(doc_enc.docCodeInitials, '')) AS docCodeInitials,
 
     ISNULL(omai.AdditionalInstructions, '') AS sAdditionalInstructions,
     CASE WHEN ISNULL(omai.DAW, 0) = 0 THEN '' ELSE CONVERT(varchar(10), omai.DAW) END AS daw,
 
     CAST(0 AS bit) AS isCompound,
-    NULL AS compoundSignature,
+    '' AS compoundSignature,
     ISNULL(t.FillStatus, '') AS fillStatus,
-    NULL AS crsimages,
+    '' AS crsimages,
 
     CASE
         WHEN t.DoctorsFlag = -1 AND t.PatientsFlag = 1 THEN 'Taking'
@@ -288,7 +250,7 @@ SELECT
         ELSE ''
     END AS doctorFlagValue,
 
-    ISNULL(rxlog.RxChannel, '') AS RxChannel,
+    '' AS RxChannel,
 
     ISNULL(dx.DxNameOnly, '') AS DxNameOnly,
     CASE
@@ -300,7 +262,7 @@ SELECT
 
     CONVERT(varchar(20), t.AssessId) AS assessmentId,
     CAST(CASE WHEN rs.rx_cnt > 1 THEN 1 ELSE 0 END AS bit) AS IsContinuedNextPage,
-    ISNULL(rxlog.CSASchedule, '') AS CSASchedule,
+    '0' AS CSASchedule,
 
     COALESCE(
         NULLIF(i.itemName, ''),
@@ -313,19 +275,19 @@ SELECT
             WHEN COALESCE(
                 NULLIF(a.RxFormulationValue, ''),
                 NULLIF(d.FormulationValue, ''),
-                CASE WHEN LOWER(COALESCE(i.itemName, i.itemDesc, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
+                CASE WHEN LOWER(COALESCE(i.itemName, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
                 ''
             ) <> ''
                 THEN ' ' + LOWER(COALESCE(
                     NULLIF(a.RxFormulationValue, ''),
                     NULLIF(d.FormulationValue, ''),
-                    CASE WHEN LOWER(COALESCE(i.itemName, i.itemDesc, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
+                    CASE WHEN LOWER(COALESCE(i.itemName, t.MedicineName, '')) LIKE '%tablet%' THEN 'tablet' END,
                     ''
                 ))
             ELSE ''
         END AS completeRxName,
 
-    NULL AS stDtWo,
+    '' AS stDtWo,
 
     CONVERT(varchar(10), e.date, 101) + ' ' +
     COALESCE(CONVERT(varchar(8), CAST(e.startTime AS time), 108), NULLIF(LEFT(e.time, 8), ''), '00:00:00') +
@@ -333,16 +295,16 @@ SELECT
 
     COALESCE(a.RxDurationValue, d.DurationValue, '') AS duration,
 
-    NULL AS AllChannelPharmacy,
-    ISNULL(NULLIF(ph.pharmacyname, ''), ISNULL(rxlog.PharmacyName, '')) AS PharmacyName,
+    '' AS AllChannelPharmacy,
+    '' AS PharmacyName,
 
     CONVERT(varchar(10), e.date, 101) + ' ' +
     COALESCE(CONVERT(varchar(8), CAST(e.startTime AS time), 108), NULLIF(LEFT(e.time, 8), ''), '00:00:00') AS EncounterDate,
 
-    ISNULL(rxlog.TransactionTime, '') AS TransactionTime,
+    '' AS TransactionTime,
     CAST(0 AS bit) AS hasAlert,
     ISNULL(CONVERT(varchar(10), t.LastTaken, 101), '') AS lastTaken,
-    NULL AS homemedstatus,
+    '' AS homemedstatus,
 
     CASE
         WHEN ISNULL(NULLIF(t.PreparedBy, ''), '') <> '' THEN 'Zz' + t.PreparedBy
@@ -350,7 +312,7 @@ SELECT
         ELSE ''
     END AS preparedBy,
 
-    NULL AS startDateWO,
+    '' AS startDateWO,
     ISNULL(t.rxkop, '') AS rxKOP,
     ISNULL(t.rxDrugSource, '') AS rxDrugSource,
     ISNULL(t.disconorstopnotes, '') AS disconorstopnotes
@@ -375,20 +337,4 @@ LEFT JOIN prep_user pu
     ON pu.uid = t.PreparedById
 LEFT JOIN mobiledoc.dbo.oldrxmain_addlinfo omai
     ON omai.OldRxId = t.OldRxId
-   AND omai.Rxorderno = t.RxOrderNo
-LEFT JOIN mobiledoc.dbo.pharmacy ph
-    ON  ph.pmcid               = omai.PharmacyId
-    AND ISNULL(ph.delFlag, 0)  = 0
-OUTER APPLY (
-    SELECT TOP 1
-        rsl.RxChannel,
-        rsl.CSASchedule,
-        rsl.TransactionTime,
-        rsl.PharmacyName
-    FROM mobiledoc.dbo.rxhub_scriptlog rsl
-    WHERE rsl.EncounterId = t.encounterId
-      AND rsl.ItemId      = t.ItemId
-    ORDER BY rsl.ID DESC
-) rxlog
-LEFT JOIN doc_user doc_omai
-    ON doc_omai.uid = omai.documentedUserId;
+   AND omai.Rxorderno = t.RxOrderNo;

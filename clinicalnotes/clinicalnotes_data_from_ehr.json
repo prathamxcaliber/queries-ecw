@@ -1,0 +1,26 @@
+[
+  {
+    "notes": [
+      {
+        "id": "13573",
+        "loginUserId": "278645",
+        "loginUserName": "Interactly Service Account, Interactly Service Account",
+        "date": "2026-06-02",
+        "time": "09:05:24",
+        "message": "This is a General Test Note123",
+        "subject": "Test Notes",
+        "deleteFlag": "0",
+        "arrStatus": "{\"data\":[{\"TagName\":\"Interpretation\",\"tagid\":2,\"colorCode\":\"\",\"status\":1}]}",
+        "tags": "0",
+        "screenName": "Additional Notes",
+        "createdById": "278645",
+        "createdByName": "Interactly Service Account, Interactly Service Account",
+        "updatedOn": "Jun 02,2026 09:05:24 AM",
+        "createdOn": "Jun 02,2026 08:49:27 AM",
+        "isDeviceAvailable": "false",
+        "isRPMNotes": "false"
+      }
+    ],
+    "total": 1
+  }
+]

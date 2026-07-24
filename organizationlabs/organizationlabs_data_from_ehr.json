@@ -1,0 +1,30 @@
+[
+  {
+    "CommunityId": "",
+    "LabInstructionExist": "no",
+    "LinkedLocalItems": "",
+    "alias": "",
+    "approvalRequired": "",
+    "billable": "",
+    "documentStructuredResults": 0,
+    "exceptionReasonComment": "",
+    "exceptionReasonId": "",
+    "id": 224611,
+    "ignoreProcedureValidations": 0,
+    "inactive": 0,
+    "lab": "",
+    "labCode": "",
+    "labName": "",
+    "nFavId": 0,
+    "name": "Blood Culture, Routine",
+    "orderItemType": 0,
+    "pocflag": 0,
+    "publishportal": "",
+    "result": "",
+    "showPathologyDetail": 0,
+    "sortOverride": "",
+    "supplierID": 0,
+    "tooltip": "",
+    "type": "C"
+  }
+]
